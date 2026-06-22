@@ -117,10 +117,20 @@ def main():
         }
         chapters.append(chapter)
 
+    # Try to preserve existing access token if config.js already exists
+    access_token = 'YOUR_MAPBOX_ACCESS_TOKEN'
+    if os.path.exists(output_file):
+        with open(output_file, 'r', encoding='utf-8') as old_f:
+            old_content = old_f.read()
+            import re
+            match = re.search(r"accessToken:\s*['\"]([^'\"]+)['\"]", old_content)
+            if match and match.group(1) != 'YOUR_MAPBOX_ACCESS_TOKEN':
+                access_token = match.group(1)
+
     # Now generate the config.js file
     config_content = f"""var config = {{
     style: 'mapbox://styles/mapbox/light-v11',
-    accessToken: 'YOUR_MAPBOX_ACCESS_TOKEN',
+    accessToken: '{access_token}',
     showMarkers: true,
     markerColor: '#3FB1CE',
     theme: 'light',
