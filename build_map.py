@@ -60,8 +60,8 @@ def main():
             row['gap_val'] = gap_val
             rows.append(row)
             
-    # 1. SORTING: Order from greatest gap to least
-    rows.sort(key=lambda x: x['gap_val'], reverse=True)
+    # 1. SORTING: Order by MAGNITUDE of gap (absolute value), from greatest to least
+    rows.sort(key=lambda x: abs(x['gap_val']), reverse=True)
     
     # Find max gap magnitude for color scaling
     max_gap = max([abs(r['gap_val']) for r in rows]) if rows else 1.0
@@ -106,9 +106,11 @@ def main():
             'bgColor': bg_color,  # Custom property for our updated index.html
             'location': {
                 'center': lnglat,
-                'zoom': 5.5,   # Increased zoom so map moves into the specific country region!
+                'zoom': 6.5,   # Zoomed in closer for a more dynamic effect
                 'pitch': 45.0,
-                'bearing': 0.0
+                'bearing': 0.0,
+                'speed': 0.5,  # Slows down the flight slightly for a cinematic feel
+                'curve': 1.5   # Adds a more pronounced zoom-out/zoom-in curve during the flight
             },
             'mapAnimation': 'flyTo',
             'rotateAnimation': False,
