@@ -60,14 +60,17 @@ def main():
     with open(csv_file, 'r', encoding='utf-8') as f:
         reader = csv.DictReader(f)
         for row in reader:
+            # Fuzzy match gap column
+            gap_key = next((k for k in row.keys() if k and 'gap' in k.lower()), 'Gap (Female - Male, pp)')
             try:
                 # Convert gap to float for sorting and coloring
-                gap_str = row.get('Gap (Female - Male, pp)', '0').replace('%', '').strip()
+                gap_str = row.get(gap_key, '0').replace('%', '').strip()
                 gap_val = float(gap_str) if gap_str else 0.0
             except ValueError:
                 gap_val = 0.0
                 
             row['gap_val'] = gap_val
+            row['gap_key'] = gap_key  # Save the key so we can grab the original string later
             rows.append(row)
             
     # 1. SORTING: Order by MAGNITUDE of gap (absolute value), from greatest to least
@@ -79,11 +82,23 @@ def main():
 
     chapters = []
     for row in rows:
-        country = row.get('Country', 'Unknown')
-        iso3 = row.get('ISO3', '')
-        female = row.get('Female (pp)', 'N/A')
-        male = row.get('Male (pp)', 'N/A')
-        gap = row.get('Gap (Female - Male, pp)', 'N/A')
+        # Fuzzy match columns
+        country = next((row[k] for k in row.keys() if k and 'country' in k.lower()), 'Unknown')
+        iso3 = next((row[k] for k in row.keys() if k and 'iso' in k.lower()), '')
+        
+        female = 'N/A'
+        male = 'N/A'
+        for k in row.keys():
+            if not k: continue
+            k_lower = k.lower()
+            # If it has female but not gap
+            if 'female' in k_lower and 'gap' not in k_lower:
+                female = row[k]
+            # If it has male but not female and not gap
+            elif 'male' in k_lower and 'female' not in k_lower and 'gap' not in k_lower:
+                male = row[k]
+                
+        gap = row.get(row.get('gap_key', ''), 'N/A')
         gap_val = row['gap_val']
         
         if not iso3:
