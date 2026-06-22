@@ -3,6 +3,7 @@ import json
 import urllib.request
 import time
 import os
+import ssl
 
 def get_coordinates(country):
     """Fetches coordinates for a country based on its name using Nominatim (OpenStreetMap)."""
@@ -11,7 +12,13 @@ def get_coordinates(country):
         safe_country = urllib.parse.quote(country)
         url = f"https://nominatim.openstreetmap.org/search?country={safe_country}&format=json&limit=1"
         req = urllib.request.Request(url, headers={'User-Agent': 'mapbox-storytelling-builder/1.0'})
-        with urllib.request.urlopen(req) as response:
+        
+        # Bypass SSL verification (common issue on macOS Python installations)
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+
+        with urllib.request.urlopen(req, context=ctx) as response:
             data = json.loads(response.read().decode())
             if len(data) > 0:
                 # Nominatim returns lat, lon
