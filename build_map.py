@@ -4,18 +4,21 @@ import urllib.request
 import time
 import os
 
-def get_coordinates(iso3):
-    """Fetches coordinates for a country based on its ISO3 code using a free API."""
+def get_coordinates(country):
+    """Fetches coordinates for a country based on its name using Nominatim (OpenStreetMap)."""
     try:
-        url = f"https://restcountries.com/v3.1/alpha/{iso3}"
-        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        import urllib.parse
+        safe_country = urllib.parse.quote(country)
+        url = f"https://nominatim.openstreetmap.org/search?country={safe_country}&format=json&limit=1"
+        req = urllib.request.Request(url, headers={'User-Agent': 'mapbox-storytelling-builder/1.0'})
         with urllib.request.urlopen(req) as response:
             data = json.loads(response.read().decode())
-            # restcountries returns [lat, lng], mapbox needs [lng, lat]
-            latlng = data[0]['latlng']
-            return [latlng[1], latlng[0]]
+            if len(data) > 0:
+                # Nominatim returns lat, lon
+                return [float(data[0]['lon']), float(data[0]['lat'])]
+            return [0, 0]
     except Exception as e:
-        print(f"⚠️ Could not fetch coords for {iso3}: {e}")
+        print(f"⚠️ Could not fetch coords for {country}: {e}")
         return [0, 0]
 
 def get_color_for_gap(gap_val, max_gap):
@@ -80,8 +83,8 @@ def main():
             continue
             
         print(f"  -> Processing {country} ({iso3}), Gap: {gap_val}...")
-        lnglat = get_coordinates(iso3)
-        time.sleep(0.2) # Be nice to the API
+        lnglat = get_coordinates(country)
+        time.sleep(1.2) # Nominatim requires 1 request per second max
         
         # Calculate dynamic background color based on gap
         bg_color = get_color_for_gap(gap_val, max_gap)
