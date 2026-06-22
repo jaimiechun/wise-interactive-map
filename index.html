@@ -282,10 +282,8 @@
             projection: config.projection
         });
 
-        // Disable scroll zoom so users can still scroll the page text normally
-        map.scrollZoom.disable();
-        // Add zoom and rotation controls to the map
-        map.addControl(new mapboxgl.NavigationControl());
+        // Add zoom and rotation controls to the top-left of the map so they are always visible
+        map.addControl(new mapboxgl.NavigationControl(), 'top-left');
 
         // Create a inset map if enabled in config.js
         if (config.inset) {
