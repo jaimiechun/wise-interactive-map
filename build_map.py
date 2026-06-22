@@ -80,7 +80,7 @@ def main():
     max_gap = max([abs(r['gap_val']) for r in rows]) if rows else 1.0
     if max_gap == 0: max_gap = 1.0
 
-    choropleth_colors = ["match", ["get", "ISO_A3"]]
+    choropleth_colors = ["match", ["get", "ISO3166-1-Alpha-3"]]
     chapters = []
     for row in rows:
         # Fuzzy match columns
