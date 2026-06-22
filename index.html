@@ -312,8 +312,13 @@
             var layers = map.getStyle().layers;
             for (var i = 0; i < layers.length; i++) {
                 if (layers[i].type === 'symbol') {
-                    firstSymbolId = layers[i].id;
-                    break;
+                    if (!firstSymbolId) firstSymbolId = layers[i].id;
+                    
+                    // Remove white outline (halo) and set text to black for better readability
+                    if (layers[i].layout && layers[i].layout['text-field']) {
+                        map.setPaintProperty(layers[i].id, 'text-halo-width', 0);
+                        map.setPaintProperty(layers[i].id, 'text-color', '#000000');
+                    }
                 }
             }
 
