@@ -1,0 +1,142 @@
+import csv
+import json
+import urllib.request
+import time
+import os
+
+def get_coordinates(iso3):
+    """Fetches coordinates for a country based on its ISO3 code using a free API."""
+    try:
+        url = f"https://restcountries.com/v3.1/alpha/{iso3}"
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req) as response:
+            data = json.loads(response.read().decode())
+            # restcountries returns [lat, lng], mapbox needs [lng, lat]
+            latlng = data[0]['latlng']
+            return [latlng[1], latlng[0]]
+    except Exception as e:
+        print(f"⚠️ Could not fetch coords for {iso3}: {e}")
+        return [0, 0]
+
+def get_color_for_gap(gap_val, max_gap):
+    # Scale intensity from 0 to 1 based on gap relative to max_gap
+    intensity = min(abs(gap_val) / max_gap, 1.0) if max_gap > 0 else 0
+    
+    if gap_val >= 0:
+        # Positive: Red (More female insecurity)
+        # Intensity increases darkness
+        r = int(255 - (100 * intensity))
+        g = int(200 * (1 - intensity))
+        b = int(200 * (1 - intensity))
+    else:
+        # Negative: Blue (More male insecurity)
+        r = int(200 * (1 - intensity))
+        g = int(200 * (1 - intensity))
+        b = int(255 - (100 * intensity))
+        
+    return f"rgb({r}, {g}, {b})"
+
+def main():
+    csv_file = "data.csv"
+    output_file = "config.js"
+    
+    if not os.path.exists(csv_file):
+        print(f"❌ Error: '{csv_file}' not found in the current directory.")
+        return
+
+    print("🌍 Reading data.csv and fetching coordinates...")
+    rows = []
+    
+    with open(csv_file, 'r', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            try:
+                # Convert gap to float for sorting and coloring
+                gap_str = row.get('Gap (Female - Male, pp)', '0').replace('%', '').strip()
+                gap_val = float(gap_str) if gap_str else 0.0
+            except ValueError:
+                gap_val = 0.0
+                
+            row['gap_val'] = gap_val
+            rows.append(row)
+            
+    # 1. SORTING: Order from greatest gap to least
+    rows.sort(key=lambda x: x['gap_val'], reverse=True)
+    
+    # Find max gap magnitude for color scaling
+    max_gap = max([abs(r['gap_val']) for r in rows]) if rows else 1.0
+    if max_gap == 0: max_gap = 1.0
+
+    chapters = []
+    for row in rows:
+        country = row.get('Country', 'Unknown')
+        iso3 = row.get('ISO3', '')
+        female = row.get('Female (pp)', 'N/A')
+        male = row.get('Male (pp)', 'N/A')
+        gap = row.get('Gap (Female - Male, pp)', 'N/A')
+        gap_val = row['gap_val']
+        
+        if not iso3:
+            continue
+            
+        print(f"  -> Processing {country} ({iso3}), Gap: {gap_val}...")
+        lnglat = get_coordinates(iso3)
+        time.sleep(0.2) # Be nice to the API
+        
+        # Calculate dynamic background color based on gap
+        bg_color = get_color_for_gap(gap_val, max_gap)
+        
+        description = f"""
+        <h3 style="margin-top: 0;">Water Insecurity in {country}</h3>
+        <ul style="font-size: 1.1em; padding: 15px; background: rgba(0,0,0,0.15); border-radius: 8px; list-style-type: none; margin-left: 0;">
+            <li><b>Female:</b> {female} pp</li>
+            <li><b>Male:</b> {male} pp</li>
+            <li><b>Gap (Female - Male):</b> {gap} pp</li>
+        </ul>
+        <p><i>{"Red indicates higher female insecurity." if gap_val >= 0 else "Blue indicates higher male insecurity."}</i></p>
+        """
+        
+        chapter = {
+            'id': iso3.lower(),
+            'alignment': 'left',
+            'hidden': False,
+            'title': country,
+            'image': '',
+            'description': description,
+            'bgColor': bg_color,  # Custom property for our updated index.html
+            'location': {
+                'center': lnglat,
+                'zoom': 5.5,   # Increased zoom so map moves into the specific country region!
+                'pitch': 45.0,
+                'bearing': 0.0
+            },
+            'mapAnimation': 'flyTo',
+            'rotateAnimation': False,
+            'onChapterEnter': [],
+            'onChapterExit': []
+        }
+        chapters.append(chapter)
+
+    # Now generate the config.js file
+    config_content = f"""var config = {{
+    style: 'mapbox://styles/mapbox/light-v11',
+    accessToken: 'YOUR_MAPBOX_ACCESS_TOKEN',
+    showMarkers: true,
+    markerColor: '#3FB1CE',
+    theme: 'light',
+    use3dTerrain: false,
+    title: 'Water Security Overview',
+    subtitle: 'Exploring the gender gap in water insecurity.',
+    byline: 'By Jaimie Chun',
+    footer: 'Data source: Your private dataset',
+    chapters: {json.dumps(chapters, indent=4)}
+}};"""
+
+    with open(output_file, 'w', encoding='utf-8') as f:
+        f.write(config_content)
+        
+    print(f"\n✅ Success! Generated '{output_file}' with {len(chapters)} chapters.")
+    print("👉 Don't forget to replace 'YOUR_MAPBOX_ACCESS_TOKEN' in config.js with your actual token!")
+
+if __name__ == "__main__":
+    main()

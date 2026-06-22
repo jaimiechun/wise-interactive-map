@@ -238,6 +238,13 @@
             }
 
             chapter.classList.add(config.theme);
+            if (record.bgColor) {
+                chapter.style.backgroundColor = record.bgColor;
+                chapter.style.color = '#ffffff';
+                // Adjust links to be visible on colored background
+                var links = chapter.getElementsByTagName('a');
+                for (var i=0; i<links.length; i++) { links[i].style.color = '#ffffff'; }
+            }
             container.appendChild(chapter);
             container.classList.add(alignments[record.alignment] || 'centered');
             if (record.hidden) {
@@ -284,7 +291,8 @@
         }
 
         if (config.showMarkers) {
-            var marker = new mapboxgl.Marker({ color: config.markerColor });
+            var initialColor = config.chapters[0].bgColor || config.markerColor;
+            var marker = new mapboxgl.Marker({ color: initialColor });
             marker.setLngLat(config.chapters[0].location.center).addTo(map);
         }
 
@@ -330,7 +338,9 @@
                     map[chapter.mapAnimation || 'flyTo'](chapter.location);
 
                     if (config.showMarkers) {
-                        marker.setLngLat(chapter.location.center);
+                        marker.remove();
+                        marker = new mapboxgl.Marker({ color: chapter.bgColor || config.markerColor });
+                        marker.setLngLat(chapter.location.center).addTo(map);
                     }
                     if (chapter.onChapterEnter.length > 0) {
                         chapter.onChapterEnter.forEach(setLayerOpacity);
