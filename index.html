@@ -278,9 +278,14 @@
             zoom: config.chapters[0].location.zoom,
             bearing: config.chapters[0].location.bearing,
             pitch: config.chapters[0].location.pitch,
-            interactive: false,
+            interactive: true,
             projection: config.projection
         });
+
+        // Disable scroll zoom so users can still scroll the page text normally
+        map.scrollZoom.disable();
+        // Add zoom and rotation controls to the map
+        map.addControl(new mapboxgl.NavigationControl());
 
         // Create a inset map if enabled in config.js
         if (config.inset) {
@@ -354,6 +359,36 @@
                     }
                 });
             };
+
+            // Add click interaction for the choropleth layer
+            map.on('click', 'country-choropleth', function (e) {
+                if (e.features.length > 0) {
+                    var iso3 = e.features[0].properties['ISO3166-1-Alpha-3'];
+                    if (iso3) {
+                        var chapter = config.chapters.find(c => c.id === iso3.toLowerCase());
+                        if (chapter) {
+                            // Create a popup containing the data description for that country
+                            new mapboxgl.Popup({ closeOnClick: true, maxWidth: '300px' })
+                                .setLngLat(e.lngLat)
+                                .setHTML(chapter.description)
+                                .addTo(map);
+                        }
+                    }
+                }
+            });
+
+            // Change the cursor to a pointer when hovering over a country with data
+            map.on('mouseenter', 'country-choropleth', function (e) {
+                var iso3 = e.features[0].properties['ISO3166-1-Alpha-3'];
+                if (iso3 && config.chapters.find(c => c.id === iso3.toLowerCase())) {
+                    map.getCanvas().style.cursor = 'pointer';
+                }
+            });
+
+            // Change it back when leaving
+            map.on('mouseleave', 'country-choropleth', function () {
+                map.getCanvas().style.cursor = '';
+            });
 
             // setup the instance, pass callback functions
             scroller
