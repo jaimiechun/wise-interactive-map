@@ -301,6 +301,33 @@
 
 
         map.on("load", function () {
+            // Add countries GeoJSON source for choropleth
+            map.addSource('countries', {
+                type: 'geojson',
+                data: 'https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson'
+            });
+
+            // Find the first symbol layer to place the fill layer below text labels
+            var firstSymbolId;
+            var layers = map.getStyle().layers;
+            for (var i = 0; i < layers.length; i++) {
+                if (layers[i].type === 'symbol') {
+                    firstSymbolId = layers[i].id;
+                    break;
+                }
+            }
+
+            map.addLayer({
+                'id': 'country-choropleth',
+                'type': 'fill',
+                'source': 'countries',
+                'paint': {
+                    'fill-color': config.choroplethColors || 'rgba(0,0,0,0)',
+                    'fill-opacity': 0.7,
+                    'fill-outline-color': 'rgba(255,255,255,0.5)'
+                }
+            }, firstSymbolId);
+
             if (config.use3dTerrain) {
                 map.addSource('mapbox-dem', {
                     'type': 'raster-dem',

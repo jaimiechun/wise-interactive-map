@@ -80,6 +80,7 @@ def main():
     max_gap = max([abs(r['gap_val']) for r in rows]) if rows else 1.0
     if max_gap == 0: max_gap = 1.0
 
+    choropleth_colors = ["match", ["get", "ISO_A3"]]
     chapters = []
     for row in rows:
         # Fuzzy match columns
@@ -110,6 +111,7 @@ def main():
         
         # Calculate dynamic background color based on gap
         bg_color = get_color_for_gap(gap_val, max_gap)
+        choropleth_colors.extend([iso3.upper(), bg_color])
         
         description = f"""
         <h3 style="margin-top: 0;">Water Insecurity in {country}</h3>
@@ -144,6 +146,8 @@ def main():
         }
         chapters.append(chapter)
 
+    choropleth_colors.append("rgba(0,0,0,0)") # Fallback color
+
     # Try to preserve existing access token if config.js already exists
     access_token = 'YOUR_MAPBOX_ACCESS_TOKEN'
     if os.path.exists(output_file):
@@ -166,6 +170,7 @@ def main():
     subtitle: 'Exploring the gender gap in water insecurity.',
     byline: 'By Jaimie Chun',
     footer: 'Data source: Your private dataset',
+    choroplethColors: {json.dumps(choropleth_colors, indent=4)},
     chapters: {json.dumps(chapters, indent=4)}
 }};"""
 
